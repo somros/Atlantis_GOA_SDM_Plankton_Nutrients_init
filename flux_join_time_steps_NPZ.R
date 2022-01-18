@@ -22,25 +22,47 @@ here <- here::here
 map <- purrr::map
 options(dplyr.summarise.inform=FALSE)
 
-# STEP 1: use NCO and CDO to go from ROMS data to obtain a Jan climatology from the ROMS-NPZ data
-# I cannot do this all in CDO because the first step of merging over time drops 1-D variables (including Vtransform) from my ROMS data
-# If you want to do this you need to have NCO and CDO installed (http://nco.sourceforge.net/, https://code.mpimet.mpg.de/projects/cdo)
+# STEP 1: use NCO or CDO to go from ROMS data to obtain a Jan climatology from the ROMS-NPZ data
+# If you want to do this you need to have NCO or CDO installed (http://nco.sourceforge.net/, https://code.mpimet.mpg.de/projects/cdo)
 # For now I am doing this from Cygwin command line (I am on Windows) - there is a package to do this in R
 # Here are the commands from Cygwin, after navigating to the folder with the ROMS-NPZ data of interest:
+
+# I cannot do this in CDO because the first AND second steps of merging over time and then averaging drop 1-D variables (including Vtransform) from my ROMS data, see thread at https://code.mpimet.mpg.de/boards/1/topics/1177
+# Leaving here the CDO commands I tried for future reference
 
 # cdo mergetime nep5_avg_08*.nc one_file.nc    # NO THIS KILLS 1-d VARS
 # cdo monavg one_file.nc monthly_means.nc  #gets monthly means for all vars 
 # cdo selmon,1 monthly_means.nc jan.nc  #keeps jan only
 # cdo selyear,2017 jan.nc jan2017.nc  #only need this last one because one file had a mislabeled time step (1900-01-01), keep Jan 2017 only
 
+# NCO seems to work better, in that all variables are retained after concatenating and taking the average
 
-# ncrcat nep5_avg_0804.nc nep5_avg_0805.nc nep5_avg_0806.nc nep5_avg_0807.nc nep5_avg_0808.nc one_file.nc
+# ncrcat nep5_avg_0804.nc nep5_avg_0805.nc nep5_avg_0806.nc nep5_avg_0807.nc nep5_avg_0808.nc one_file.nc # (not very practical for larger sets of files)
 # ncra -d ocean_time,6,35 one_file.nc jan_mean.nc
+
+# UPDATE 17/01/2022
+# We can use an extension of these NCO commands to calculate seasonal climatologies follow these steps
+
+# ncrcat nep5_avg_0804.nc nep5_avg_0805.nc nep5_avg_0806.nc nep5_avg_0807.nc nep5_avg_0808.nc nep5_avg_0809.nc nep5_avg_0810.nc nep5_avg_0811.nc nep5_avg_0812.nc nep5_avg_0813.nc /cygdrive/c/Users/Alberto\ Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s2.nc
+# 
+# ncra -d ocean_time,6,94 s1.nc s1_clim.nc 
+# 
+# ncrcat nep5_avg_0813.nc nep5_avg_0814.nc nep5_avg_0815.nc nep5_avg_0816.nc nep5_avg_0817.nc nep5_avg_0818.nc nep5_avg_0819.nc nep5_avg_0820.nc nep5_avg_0821.nc nep5_avg_0822.nc /cygdrive/c/Users/Alberto\ Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s2.nc
+# 
+# ncra -d ocean_time,6,96 s2.nc s2_clim.nc
+# 
+# ncrcat nep5_avg_0822.nc nep5_avg_0823.nc nep5_avg_0824.nc nep5_avg_0825.nc nep5_avg_0826.nc nep5_avg_0827.nc nep5_avg_0828.nc nep5_avg_0829.nc nep5_avg_0830.nc nep5_avg_0831.nc /cygdrive/c/Users/Alberto\ Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s3.nc
+# 
+# ncra -d ocean_time,7,98 s3.nc s3_clim.nc
+# 
+# ncrcat nep5_avg_0831.nc nep5_avg_0832.nc nep5_avg_0833.nc nep5_avg_0834.nc nep5_avg_0835.nc nep5_avg_0836.nc nep5_avg_0837.nc nep5_avg_0838.nc nep5_avg_0839.nc nep5_avg_0840.nc /cygdrive/c/Users/Alberto\ Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s4.nc
+# 
+# ncra -d ocean_time,9,100 s4.nc s4_clim.nc
 
 # STEP 2: run code on the jan climatology
 
 # read ROMS data
-romsfile <- 'C:/Users/Alberto Rovellini/Documents/GOA/ROMS/data/roms/nep_test/long/jan_mean.nc'
+romsfile <- 'C:/Users/Alberto Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s4_clim.nc'
 roms <- tidync(romsfile)
 # read GOA ROMS grid
 romsfile2 <- 'C:/Users/Alberto Rovellini/Documents/GOA/ROMS/data/roms/NEP_grid_5a.nc'
@@ -588,7 +610,7 @@ plankton <- function(this_variable){
     select(.bx0,maxz,var_mean) %>%
     mutate(long_name = this_unit[1], unit = this_unit[2])
   
-  write.csv(var_out, paste0('../outputs/',this_variable,'.csv'), row.names = FALSE)
+  write.csv(var_out, paste0('../outputs/s1s4/s4_',this_variable,'.csv'), row.names = FALSE)
 }
 
 purrr::map(init_vars,plankton)

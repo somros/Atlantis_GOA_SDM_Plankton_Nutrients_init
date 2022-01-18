@@ -29,7 +29,7 @@ atlantis_bbox <- st_bbox(atlantis_box)
 ```
 
 ```{r}
-variable_files <- list.files('../outputs', pattern = '.csv', full.names = TRUE)
+variable_files <- list.files('../outputs/s1s4/', pattern = '.csv', full.names = TRUE)
 
 variable_files
 
@@ -74,5 +74,28 @@ var_join %>% ggplot()+
   scale_y_reverse()+
   theme_minimal()+
   facet_wrap(~.bx0, ncol = 6)
+```
+
+# Calculate S1-S4
+
+Steps are:
+
+1. Calculate the volume for each box.
+2. Multiply by the concentration for each cell to obtain a biomass.
+3. Calculate a total biomass.
+4. Work out S as proportion for each group.
+```{r}
+s <- var_join %>% 
+  group_by(box_id) %>%
+  mutate(minz = lag(maxz, default = 0)) %>%
+  ungroup() %>%
+  mutate(dz = maxz-minz,
+         vol_m3 = area*dz,
+         biomass = var_mean*vol_m3,
+         prop = biomass/(sum(biomass, na.rm = T))) %>%
+  select(box_id,prop) %>%
+  rowwise() %>%
+  mutate(prop = ifelse(is.na(prop),0,prop)) %>%
+  ungroup()
 ```
 
