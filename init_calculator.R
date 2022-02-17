@@ -8,6 +8,8 @@ library(data.table)
 library(sf)
 library(rbgm)
 
+select <- dplyr::select
+
 #read in model geometry
 atlantis_bgm <- read_bgm('../data/GOA_WGS84_V4_final.bgm')
 atlantis_box <- atlantis_bgm %>% box_sf()
@@ -162,6 +164,40 @@ npz_atlantis <- npz_vars %>%
   ungroup() %>%
   complete(Name,.bx0,lyr) %>%
   select(-maxz,-unit)
+
+
+# Calculate virgin biomass (t) for init calculations ------------------------------------------------
+
+npz_biomass <- npz_vars %>% 
+  group_by(Name,.bx0,maxz,unit) %>%
+  summarize(Value = sum(var_mean)) %>%
+  ungroup() %>%
+  arrange(Name,.bx0,maxz) %>%
+  group_by(Name,unit,.bx0) %>%
+  mutate(minz=lag(maxz,default=0), # add depth layer thickness
+         dz=maxz-minz) %>%
+  ungroup() %>%
+  left_join((atlantis_box %>% st_set_geometry(NULL) %>% select(.bx0,area))) %>%
+  mutate(layer_volume_m3=dz*area)
+
+# check the units
+unique(npz_biomass$unit) # "milligram carbon meter-3"   "millimole nitrogen meter-3"
+
+# for "milligram carbon meter-3" 
+mgCtoTon <- 20/1e9 # assuming C is AFDW, which is 1/20 of WW (for consistency with other Atlantis calculations)
+# for "millimole nitrogen meter-3"
+mmolNtoTon <- 14.01*5.7*20/1e9 
+
+npz_biomass1 <- npz_biomass %>%
+  rowwise() %>%
+  mutate(Biomass_t=ifelse(unit=="milligram carbon meter-3",Value*mgCtoTon*layer_volume_m3,Value*mmolNtoTon*layer_volume_m3))
+
+# add it all up and write it out as .csv to cut-paste in the parameter spreadsheets
+npz_biomass1 %>%
+  group_by(Name) %>%
+  summarise(Biomass_goa_t=sum(Biomass_t)) %>%
+  write.csv('npz_biomass_tot_goa.csv',row.names = F)
+
 
 # this above should be 8vars*109boxes*6lyrs=5232 rows
 

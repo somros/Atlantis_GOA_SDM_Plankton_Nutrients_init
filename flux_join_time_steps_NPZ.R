@@ -62,7 +62,8 @@ options(dplyr.summarise.inform=FALSE)
 # STEP 2: run code on the jan climatology
 
 # read ROMS data
-romsfile <- 'C:/Users/Alberto Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s4_clim.nc'
+romsfile <- 'C:/Users/Alberto Rovellini/Documents/GOA/ROMS/data/roms/nep_test/long/jan_mean.nc'
+#romsfile <- 'C:/Users/Alberto Rovellini/Documents/GOA/SDM/Plankton_and_nutrients/data/ROMS_climatologies/s4_clim.nc'
 roms <- tidync(romsfile)
 # read GOA ROMS grid
 romsfile2 <- 'C:/Users/Alberto Rovellini/Documents/GOA/ROMS/data/roms/NEP_grid_5a.nc'
@@ -610,7 +611,7 @@ plankton <- function(this_variable){
     select(.bx0,maxz,var_mean) %>%
     mutate(long_name = this_unit[1], unit = this_unit[2])
   
-  write.csv(var_out, paste0('../outputs/s1s4/s4_',this_variable,'.csv'), row.names = FALSE)
+  write.csv(var_out, paste0('../outputs/january_init/',this_variable,'.csv'), row.names = FALSE)
 }
 
 purrr::map(init_vars,plankton)
