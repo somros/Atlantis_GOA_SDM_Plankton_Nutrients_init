@@ -198,7 +198,6 @@ npz_biomass1 %>%
   summarise(Biomass_goa_t=sum(Biomass_t)) %>%
   write.csv('npz_biomass_tot_goa.csv',row.names = F)
 
-
 # this above should be 8vars*109boxes*6lyrs=5232 rows
 
 ############################### write to a text file to modify in a text editor and append to the cdf generated with make.init.nc()
@@ -220,6 +219,7 @@ npz_biomass1 %>%
 plankton <- c('Euphausiids_N','Microzooplankton_N','Mesozooplankton_N','Diatoms_N','Picophytoplankton_N')
 
 for (i in 1:length(plankton)){
+  
   dat <- npz_atlantis %>%
     filter(Name==plankton[i]) %>%
     mutate(Value_N = signif(Value/5.7,digits = 5)) %>% # turn to mg N m-3
@@ -229,6 +229,11 @@ for (i in 1:length(plankton)){
     mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),0),nrow = 1)))) 
   
   write.table(rbindlist(dat$data),paste0('../outputs/init/',dat$Name[1],'.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+  
+  # write out Silica for diatoms. Diatoms in the GOA should not be Si-limited (Hinckley et al. 2009), so we use a ratio of Si:N 3:1 for consistency with other Atlantis calculations and to err on the side of Si not being limiting
+  if(plankton[i] == 'Diatoms_N'){
+    write.table(rbindlist(dat$data)*3,paste0('../outputs/init/','Diatoms_Si','.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+  }
   
 }
 
