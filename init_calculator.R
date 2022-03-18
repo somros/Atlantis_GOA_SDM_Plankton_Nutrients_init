@@ -232,14 +232,14 @@ for (i in 1:length(plankton)){
   
   # write out Silica for diatoms. Diatoms in the GOA should not be Si-limited (Hinckley et al. 2009), so we use a ratio of Si:N 3:1 for consistency with other Atlantis calculations and to err on the side of Si not being limiting
   if(plankton[i] == 'Diatoms_N'){
-    write.table(rbindlist(dat$data)*3,paste0('../outputs/init/','Diatoms_Si','.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+    write.table(rbindlist(dat$data)*3,paste0('../outputs/init/','Diatoms_S','.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
   }
   
 }
 
 # NO3 and NH3
 # Convert millimol N m-3 to mg N m-3 (*14.01)
-nuts <- c('NO3_N','NH3_N')
+nuts <- c('NO3','NH3')
 
 for (i in 1:length(nuts)){
   dat <- npz_atlantis %>%

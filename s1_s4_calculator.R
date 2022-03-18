@@ -19,6 +19,22 @@ atlantis_bbox <- st_bbox(atlantis_box)
 variable_files <- list.files('../outputs/s1s4/', pattern = '.csv', full.names = TRUE)
 variables <- unique(gsub(".*[_]([^.]+)[.].*", "\\1", variable_files))
 
+key <- data.frame('npz'=variables,
+                  'fg'=c('Mesozooplankton',
+                  'Detritus',
+                  'Euphausiids',
+                  'Iron',
+                  'Microzooplankton',
+                  'Microzooplankton',
+                  'Mesozooplankton',
+                  'NH3',
+                  'NO3',
+                  'Diatoms',
+                  'Picophytoplankton'))
+
+# make an empty list
+biomass_list <- list()
+
 for(v in 1:length(variables)) {
   
   this_variable <- variables[v]
@@ -138,31 +154,51 @@ for(v in 1:length(variables)) {
            biomass_s4 = conc_4*vol_m3) %>%
     select(box_id,maxz,biomass_s1:biomass_s4) 
   
+  
   # sum over layers for the total biomass per box, then calclate proportions
-  s1_s4 <- biomass_layers %>%
+  season_biomass <- biomass_layers %>%
     group_by(box_id) %>%
     summarise(across(starts_with("biomass"), ~ sum(.x, na.rm = TRUE))) %>%
     ungroup() %>%
-    mutate(s1 = biomass_s1/sum(biomass_s1, na.rm = T),
-           s2 = biomass_s2/sum(biomass_s2, na.rm = T),
-           s3 = biomass_s3/sum(biomass_s3, na.rm = T),
-           s4 = biomass_s4/sum(biomass_s4, na.rm = T)) %>%
-    select(box_id,s1:s4)
+    mutate(fg = key[v,2])
   
-  # sum(s1_s4$s1, na.rm = T) # check sum to 1
-  # sum(s1_s4$s2, na.rm = T)
-  # sum(s1_s4$s3, na.rm = T)
-  # sum(s1_s4$s4, na.rm = T)
+  biomass_list[[v]] <- season_biomass
+  
+}
+
+biomass_by_group <- rbindlist(biomass_list) %>%
+  pivot_longer(cols = biomass_s1:biomass_s4, names_to = 'season', values_to = 'biomass') %>%
+  group_by(fg, season, box_id) %>%
+  summarise(biomass = sum(biomass,na.rm = T)) %>%
+  ungroup() %>%
+  group_by(fg, season) %>%
+  mutate(prop = biomass/sum(biomass)) %>%
+  ungroup()
+
+# reshape this so it is wide again
+s1_s4_all <- biomass_by_group %>%
+  select(-biomass) %>%
+  pivot_wider(names_from = season, values_from = prop) %>%
+  set_names(c('fg','box_id','s1','s2','s3','s4'))
+
+# loop over FGs, write out a file and make a plot
+
+FGs <- key$fg
+
+for(i in 1:length(FGs)){
+  
+  this_fg <- FGs[i]
+  this_s <- s1_s4_all %>% filter(fg==this_fg)
   
   # write out file
-  write.csv(s1_s4, paste0('../outputs/s1s4/final_for_parameters/',this_variable,'.csv'), row.names = FALSE)
+  write.csv(this_s, paste0('../outputs/s1s4/final_for_parameters/',this_fg,'.csv'), row.names = FALSE)
   
   # make a plot, with s1-s4
   coast <- maps::map('worldHires', regions = c('USA','Canada'), plot = FALSE, fill = TRUE)
   coast_sf <- coast %>% st_as_sf() %>% st_transform(crs=atlantis_crs)
   
   p <- atlantis_box %>%
-    left_join(s1_s4 %>% pivot_longer(cols = s1:s4, names_to = 'Quarter', values_to = 'Proportion'),
+    left_join(this_s %>% pivot_longer(cols = s1:s4, names_to = 'Quarter', values_to = 'Proportion'),
               by = 'box_id') %>%
     ggplot()+
     geom_sf(aes(fill=Proportion))+
@@ -170,9 +206,12 @@ for(v in 1:length(variables)) {
     geom_sf(data = coast_sf)+
     coord_sf(xlim=c(atlantis_bbox$xmin,atlantis_bbox$xmax),ylim=c(atlantis_bbox$ymin,atlantis_bbox$ymax))+
     theme_bw()+
-    labs(title=paste0('S1-S4 for ', this_variable))+
+    labs(title=paste0('S1-S4 for ', this_fg))+
     facet_wrap(~Quarter)
   
-  ggsave(paste0('../outputs/s1s4/final_for_parameters/',this_variable,'.png'), p, width = 12, height = 8)
+  ggsave(paste0('../outputs/s1s4/final_for_parameters/',this_fg,'.png'), p, width = 12, height = 8)
   
 }
+
+
+  
