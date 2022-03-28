@@ -193,6 +193,7 @@ npz_biomass1 <- npz_biomass %>%
   mutate(Biomass_t=ifelse(unit=="milligram carbon meter-3",Value*mgCtoTon*layer_volume_m3,Value*mmolNtoTon*layer_volume_m3))
 
 # add it all up and write it out as .csv to cut-paste in the parameter spreadsheets
+# for simplicity here we ignore the detritus and nutrient in the sediments - the sediment layer has 1 m thickness and is thus negligible here
 npz_biomass1 %>%
   group_by(Name) %>%
   summarise(Biomass_goa_t=sum(Biomass_t)) %>%
@@ -218,6 +219,8 @@ npz_biomass1 %>%
 # convert mg C m-3 to mg N m-3 (/5.7)
 plankton <- c('Euphausiids_N','Microzooplankton_N','Mesozooplankton_N','Diatoms_N','Picophytoplankton_N')
 
+# assume that plankton concentrations in the sediment is 0
+
 for (i in 1:length(plankton)){
   
   dat <- npz_atlantis %>%
@@ -239,16 +242,21 @@ for (i in 1:length(plankton)){
 
 # NO3 and NH3
 # Convert millimol N m-3 to mg N m-3 (*14.01)
-nuts <- c('NO3','NH3')
+nuts <- c('NO3_N','NH3_N')
+
+# assume that nutrient concentration in the sediment is same as the bottom layer at initial conditions
 
 for (i in 1:length(nuts)){
+  
+  i <- 1
+  
   dat <- npz_atlantis %>%
     filter(Name==nuts[i]) %>%
     mutate(Value_N = signif(Value*14.01,digits = 5)) %>% # turn to mg N m-3
     replace_na(list(Value_N=0)) %>%
     select(Name,.bx0,Value_N) %>%
     nest(data = Value_N) %>%
-    mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),0),nrow = 1)))) 
+    mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),t(x)[1]),nrow = 1)))) 
   
   write.table(rbindlist(dat$data),paste0('../outputs/init/',dat$Name[1],'.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
   
@@ -257,22 +265,24 @@ for (i in 1:length(nuts)){
 # Detritus
 # Convert detritus concentrations to Detritus_labile, Detritus_refractory, and Carrion in mg N m-3 (*0.4,*0.4,*0.2)
 
+# assume that detritus concentration in the sediment is same as the bottom layer at initial conditions
+
 detritus <- npz_atlantis %>%
   filter(Name=='Detritus_N')
 
-det_ref <- det_lab <- detritus %>%
+det_ref <- det_lab <- detritus %>% # ref and lab are the same to start
   mutate(Value_N = signif(Value*0.4/5.7,digits = 5)) %>%
   replace_na(list(Value_N=0)) %>%
   select(Name,.bx0,Value_N) %>%
   nest(data = Value_N) %>%
-  mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),0),nrow = 1))))
+  mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),t(x)[1]),nrow = 1))))
 
 carrion <-  detritus %>%
   mutate(Value_N = signif(Value*0.2/5.7,digits = 5)) %>%
   replace_na(list(Value_N=0)) %>%
   select(Name,.bx0,Value_N) %>%
   nest(data = Value_N) %>%
-  mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),0),nrow = 1))))
+  mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),t(x)[1]),nrow = 1))))
 
 write.table(rbindlist(det_ref$data),'../outputs/init/Detritus_refractory_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
 write.table(rbindlist(det_lab$data),'../outputs/init/Detritus_labile_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
