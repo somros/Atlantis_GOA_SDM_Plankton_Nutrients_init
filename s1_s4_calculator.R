@@ -212,6 +212,3 @@ for(i in 1:length(FGs)){
   ggsave(paste0('../outputs/s1s4/final_for_parameters/',this_fg,'.png'), p, width = 12, height = 8)
   
 }
-
-
-  
