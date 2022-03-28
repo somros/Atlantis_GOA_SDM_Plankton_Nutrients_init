@@ -148,8 +148,8 @@ npz_vars <- data.frame(npz_vars, 'Name'=c(rep('Mesozooplankton_N',npz_rows),
                                           rep('Microzooplankton_N',npz_rows),
                                           rep('Microzooplankton_N',npz_rows),
                                           rep('Mesozooplankton_N',npz_rows),
-                                          rep('NH3_N',npz_rows),
-                                          rep('NO3_N',npz_rows),
+                                          rep('NH3',npz_rows),
+                                          rep('NO3',npz_rows),
                                           rep('Diatoms_N',npz_rows),
                                           rep('Picophytoplankton_N',npz_rows)))
 
@@ -242,7 +242,7 @@ for (i in 1:length(plankton)){
 
 # NO3 and NH3
 # Convert millimol N m-3 to mg N m-3 (*14.01)
-nuts <- c('NO3_N','NH3_N')
+nuts <- c('NO3','NH3')
 
 # assume that nutrient concentration in the sediment is same as the bottom layer at initial conditions
 
