@@ -248,8 +248,6 @@ nuts <- c('NO3_N','NH3_N')
 
 for (i in 1:length(nuts)){
   
-  i <- 1
-  
   dat <- npz_atlantis %>%
     filter(Name==nuts[i]) %>%
     mutate(Value_N = signif(Value*14.01,digits = 5)) %>% # turn to mg N m-3
