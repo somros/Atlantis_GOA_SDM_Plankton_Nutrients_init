@@ -18,7 +18,7 @@ atlantis_box <- atlantis_bgm %>% box_sf()
 z <- c(30,100,200,500,1000,4000) # for GOA
 
 # list files
-file_list <- list.files('../outputs/january_init/',full.names = TRUE)
+file_list <- list.files('../outputs/summer_init/',full.names = TRUE)
 
 # read files and bind them by row
 npz_vars_list <- lapply(file_list, read.csv)
@@ -194,10 +194,15 @@ npz_biomass1 <- npz_biomass %>%
 
 # add it all up and write it out as .csv to cut-paste in the parameter spreadsheets
 # for simplicity here we ignore the detritus and nutrient in the sediments - the sediment layer has 1 m thickness and is thus negligible here
+# boundary and island boxes should have 0 biomass
 npz_biomass1 %>%
+  left_join(atlantis_box %>% st_set_geometry(NULL) %>% select(.bx0, botz, boundary), by = '.bx0') %>%
+  rowwise() %>%
+  mutate(Biomass_t = ifelse(botz >= 0 | isTRUE(boundary), 0, Biomass_t)) %>%
+  ungroup() %>%
   group_by(Name) %>%
   summarise(Biomass_goa_t=sum(Biomass_t)) %>%
-  write.csv('npz_biomass_tot_goa.csv',row.names = F)
+  write.csv('npz_biomass_tot_goa_summer.csv',row.names = F)
 
 # this above should be 8vars*109boxes*6lyrs=5232 rows
 
@@ -231,11 +236,11 @@ for (i in 1:length(plankton)){
     nest(data = Value_N) %>%
     mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),0),nrow = 1)))) 
   
-  write.table(rbindlist(dat$data),paste0('../outputs/init/',dat$Name[1],'.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+  write.table(rbindlist(dat$data),paste0('../outputs/init_summer/',dat$Name[1],'.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
   
   # write out Silica for diatoms. Diatoms in the GOA should not be Si-limited (Hinckley et al. 2009), so we use a ratio of Si:N 3:1 for consistency with other Atlantis calculations and to err on the side of Si not being limiting
   if(plankton[i] == 'Diatoms_N'){
-    write.table(rbindlist(dat$data)*3,paste0('../outputs/init/','Diatoms_S','.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+    write.table(rbindlist(dat$data)*3,paste0('../outputs/init_summer/','Diatoms_S','.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
   }
   
 }
@@ -256,7 +261,7 @@ for (i in 1:length(nuts)){
     nest(data = Value_N) %>%
     mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),t(x)[1]),nrow = 1)))) 
   
-  write.table(rbindlist(dat$data),paste0('../outputs/init/',dat$Name[1],'.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+  write.table(rbindlist(dat$data),paste0('../outputs/init_summer/',dat$Name[1],'.txt'), row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
   
 }
 
@@ -282,9 +287,8 @@ carrion <-  detritus %>%
   nest(data = Value_N) %>%
   mutate(data = purrr::map(data,function(x) data.frame(matrix(c(t(x),t(x)[1]),nrow = 1))))
 
-write.table(rbindlist(det_ref$data),'../outputs/init/Detritus_refractory_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
-write.table(rbindlist(det_lab$data),'../outputs/init/Detritus_labile_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
-write.table(rbindlist(carrion$data),'../outputs/init/Carrion_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+write.table(rbindlist(det_ref$data),'../outputs/init_summer/Detritus_refractory_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+write.table(rbindlist(det_lab$data),'../outputs/init_summer/Detritus_labile_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
+write.table(rbindlist(carrion$data),'../outputs/init_summer/Carrion_N.txt', row.names = FALSE, col.names = FALSE, sep = ', ', eol = ',\n')
 
 #####################
-
